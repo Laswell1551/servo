@@ -1,0 +1,11 @@
+{
+  "gnn_q_mae": 0.05408460285767188,
+  "gnn_importance_mae": 0.021803700096077388,
+  "mlp_q_mae": 0.06009544856445038,
+  "mlp_importance_mae": 0.02101518271697892,
+  "gnn_post_drift_q_mae_before_adaptation": 0.09158462825305573,
+  "gnn_post_drift_importance_mae_before_adaptation": 0.29771155139638317,
+  "train_graphs": 64,
+  "validation_graphs": 20,
+  "epochs": 28
+}

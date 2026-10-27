@@ -1,0 +1,51 @@
+{
+  "timestamp_utc": "2026-10-27T10:41:46.715463+00:00",
+  "quick_mode": false,
+  "config": {
+    "slots": 120,
+    "slot_s": 0.1,
+    "n_vehicles": 72,
+    "n_events": 36,
+    "n_nodes": 4,
+    "admission_budget": 8,
+    "road_length_m": 1000.0,
+    "sensing_range_m": 210.0,
+    "carrier_ghz": 3.5,
+    "bandwidth_hz": 100000000.0,
+    "noise_w": 1e-12,
+    "interference_alpha": 0.035,
+    "request_probability": 0.72,
+    "drift_slot": 60,
+    "failure_slot": 60
+  },
+  "seeds_main": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "model_metrics": {
+    "gnn_q_mae": 0.05408460285767188,
+    "gnn_importance_mae": 0.021803700096077388,
+    "mlp_q_mae": 0.06009544856445038,
+    "mlp_importance_mae": 0.02101518271697892,
+    "gnn_post_drift_q_mae_before_adaptation": 0.09158462825305573,
+    "gnn_post_drift_importance_mae_before_adaptation": 0.29771155139638317,
+    "train_graphs": 64,
+    "validation_graphs": 20,
+    "epochs": 28
+  },
+  "software": {
+    "python": "3.12.7",
+    "numpy": "1.26.4",
+    "torch": "2.12.1+cpu",
+    "stable_baselines3": "2.9.0"
+  },
+  "scope": "dynamic system-level V2X simulation; not NS-3/SUMO packet-level emulation"
+}

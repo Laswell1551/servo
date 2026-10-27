@@ -1,111 +1,146 @@
-# SERVO — Submodular Coverage-Aware Orchestration (selection-layer simulator)
+# SERVO: Submodular Coverage-Aware Orchestration
 
-Reproducible Monte-Carlo simulation code for the paper
+Reproducibility artifact for:
 
 > **SERVO: Submodular Coverage-Aware Orchestration of Edge Services in the 6G
 > Sensing–Communication–Computing Continuum**, J. Lin *et al.*,
-> IEEE Transactions on Services Computing (under review, 2026).
+> IEEE Transactions on Services Computing, major revision, 2026.
 
-This repository releases the **coverage-aware selection layer**: the monotone-submodular
-coverage value model and every selection method compared in the paper, implemented in
-**pure NumPy on a single CPU core** with **fixed random seeds**, so every table number and
-data figure can be reproduced exactly — no GPU, no proprietary data.
+This repository contains two evaluation tracks:
 
----
+1. **`experiments/` — end-to-end major-revision package (primary).**
+   A dynamic system-level urban-V2X simulator jointly executes the bipartite
+   coverage GNN, lazy submodular selector, residual SAC resource allocator, and
+   Page–Hinkley calibration loop.
+2. **`code/` and `data/` — original selection-layer package (legacy v1.0).**
+   These files reproduce the earlier Monte Carlo studies of the fixed-quality
+   submodular selector and are retained for traceability.
 
-## What this code reproduces
+## End-to-end revision package
 
-Running the scripts regenerates, from scratch, all selection-layer results in the paper:
+The revised environment models mobility, distance-dependent path loss and
+shadowing, co-channel interference, heterogeneous edge capacity, stochastic
+service requests, deadlines, burst load, congestion, node failure, and concept
+drift. The default trace contains 72 vehicles, 36 semantic events, four edge
+nodes, 120 slots, and an eight-flow admission budget.
 
-| Result | Script | Headline numbers (correlated regime, default settings) |
-|---|---|---|
-| Comparison vs. budget, redundancy, ablation, drift, approx. ratio | `code/servo_sim.py` | SERVO `0.880`, WUM `0.759`, MAB-CP `0.742`; r̂ = `0.987 ± 0.026` (200 instances, all > 1−1/e) |
-| 95% CIs, importance-independent regime, paired significance | `code/servo_extra.py` | SERVO−WUM = `+0.121 ± 0.017` (paired, 20 seeds) |
-| REINFORCE deep-RL selector (DRL-Sel) | `code/servo_drl.py` | `0.824` (correlated) / `0.804` (independent) |
-| 10-method comparison incl. VoI + CTS, all figures | `code/servo_v2figs.py` | SERVO `0.880`, CTS `0.877`, VoI `0.872`, DRL `0.824` |
+Seven integrated variants isolate the estimator, selector, allocator, and
+adaptation mechanism. Reported metrics include normalized completed-service
+value, P95 latency, SLA violation, completion, CPU/power utilization, total and
+per-completion energy, and complete-controller wall-clock overhead.
 
-All ten selection methods are faithfully implemented: **SERVO** (lazy/CELF greedy submodular
-maximization), **VoI** (noisy-OR value-of-information greedy), **WUM** / **WUM-RD** (additive
-and redundancy-discounted weighted utility), **OSM** (sieve-streaming submodular),
-**MAB-CP** (UCB bandit), **CTS** (combinatorial Thompson sampling), **DRL-Sel** (a REINFORCE
-neural policy-gradient selector), **PF/Prio**, **Random**, and the brute-force **OPT** at
-small scale.
+### Headline results
 
-## Scope (what is and is **not** in this release)
+All entries below are means over 10 independent nominal seeds. Confidence
+intervals and all per-slot observations are available in
+[`experiments/results/`](experiments/results/).
 
-**Included and reproduced here:** the synthetic coverage-aware *selection layer* — the submodular
-value oracle and all ten selectors above, the drift / self-evolution tracking, and the
-approximation-ratio study against the exact optimum.
+| Method | Value | P95 latency (ms) | SLA violation (%) | Completion (%) | Energy (J/slot) | Overhead (ms/slot) |
+|---|---:|---:|---:|---:|---:|---:|
+| SERVO | 0.619 | 75.7 | 30.4 | 69.6 | 15.66 | 5.75 |
+| MLP + Submodular + SAC | 0.615 | 73.9 | 31.2 | 68.8 | 15.51 | 4.99 |
+| GNN + WUM + SAC | 0.463 | 76.9 | 33.4 | 66.6 | 14.20 | 2.86 |
+| GNN + Submodular + fixed interference | 0.591 | 74.6 | 33.1 | 66.9 | 19.22 | 4.69 |
+| GNN + Submodular + equal/full allocation | 0.639 | 73.7 | 27.1 | 72.9 | 16.47 | 4.79 |
+| SERVO without adaptation | 0.619 | 75.5 | 30.6 | 69.4 | 15.66 | 5.24 |
+| Load-aware + equal allocation | 0.483 | 69.7 | 30.5 | 69.5 | 12.75 | 2.31 |
 
-**Not included** (presented in the paper as design and theory, with empirical validation
-deferred to the ongoing campaign):
+The equal/full baseline deliberately activates all available resource. It
+achieves higher nominal value than SERVO but consumes 0.81 J/slot more energy;
+the manuscript treats this as a value–resource trade-off, not as a dominance
+claim.
 
-- packet-/traffic-level network realism (NS-3 / SUMO) and hardware-in-the-loop;
-- the soft actor–critic (SAC) within-set sub-allocator experiments;
-- the coverage GNN trained and validated on **real** cooperative-perception traces;
-- the queue-aware Lyapunov-DRL selection baseline.
+Across the six stress cases, SERVO value ranges from 0.536 to 0.625 and the
+largest SLA violation is 40.2% under node failure. On common concept-drift
+traces, Page–Hinkley calibration recovers in 7.7 slots, compared with 11.3 for
+EMA and 15.0 for periodic refitting; the frozen estimator has 0% recovery
+success within the 60-slot post-drift horizon.
 
-Problem instances are **synthetic** (drawn from the importance-tier / Poisson coverage model
-of the paper, Table III), not real-world datasets.
+## Reproduce the revised experiments
 
-## Requirements
-
-```
-python >= 3.9
-numpy
-scipy
-matplotlib
-```
+The released full-run manifest records Python 3.12.7, NumPy 1.26.4,
+PyTorch 2.12.1+cpu, and Stable-Baselines3 2.9.0. Install the complete
+environment with:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-CPU only; a full run needs no GPU. First run of `servo_v2figs.py` trains the DRL policies
-(~a few minutes on one core) and caches them, so later runs are fast.
+Verify the released raw tables and summaries without rerunning training:
 
-## Quickstart
+```bash
+python experiments/verify_results.py
+```
+
+Run the complete pipeline using the released checkpoints:
+
+```bash
+python experiments/e2e_servo.py
+```
+
+Retrain the GNN, MLP ablation, and SAC allocator before running all traces:
+
+```bash
+python experiments/e2e_servo.py --force-train
+```
+
+A reduced smoke test is available with `--quick`. The script writes source
+tables to `experiments/results/`, checkpoints to `experiments/checkpoints/`,
+and publication-ready PDF/PNG figures to a generated `manuscript/` directory.
+
+Important traceability files:
+
+- `run_manifest.json`: configuration, seeds, software versions, and scope;
+- `raw_main.csv`: per-slot nominal observations for all integrated variants;
+- `raw_robustness.csv`: per-slot stress-test observations;
+- `raw_recovery.csv` and `recovery.csv`: drift comparison and recovery summary;
+- `scalability.csv`: joint vehicle/event/node scaling;
+- `paper_numbers.md`: manuscript-facing result table;
+- `implementation_audit.md`: audit trail for the corrected resource-activation
+  implementation;
+- `verify_results.py`: row-count, SLA-identity, feasibility, finite-range, and
+  summary-reproduction checks.
+
+## Scope boundary
+
+The revised package is a reproducible **system-level** V2X simulation. It is
+not NS-3/SUMO packet/traffic co-simulation, a public cooperative-perception
+trace evaluation, or a field/hardware-in-the-loop trial. The coverage GNN is
+trained and tested on graphs generated by the released simulator. These limits
+are stated explicitly in the revised manuscript.
+
+## Legacy selection-layer package
+
+The original fixed-quality selection experiments remain in `code/`, with their
+released tables in `data/`. They reproduce the earlier budget, redundancy,
+streaming, bandit, REINFORCE, VoI/CTS, and exact-optimum comparisons:
 
 ```bash
 cd code
-
-# core results (E1–E6): prints numbers, writes servo_results.json, tables, and figures
 python servo_sim.py
-
-# revision experiments: 95% CIs, importance-independent regime, paired significance
 python servo_extra.py
-
-# the trained DRL-Sel baseline on its own
 python servo_drl.py
-
-# the full 10-method comparison (adds VoI + CTS) and the publication figures
 python servo_v2figs.py
-
-# dense parameter / scalability / redundancy / approximation figures
 python servo_figs.py
 ```
 
-Each script writes its outputs (figures as `.pdf`+`.png`, and `*_numbers.json`) next to
-itself in `code/`. Results are deterministic: the same seeds reproduce the paper's numbers
-bit-for-bit.
+The legacy selection value (for example, 0.880 under its correlated synthetic
+setting) and the revised end-to-end completed-service value (0.619 under the
+dynamic V2X setting) are different experiments and should not be compared as
+the same metric.
 
 ## Repository layout
 
-```
-code/
-  servo_sim.py      core simulator: value oracle + all classical selectors + experiments E1–E6
-  servo_extra.py    reviewer-requested CIs, importance-independent regime, paired significance
-  servo_drl.py      REINFORCE deep-RL selection baseline (DRL-Sel), NumPy-only
-  servo_v2figs.py   VoI + CTS baselines, 10-method comparison, main result figures
-  servo_figs.py     dense parameter/scalability/redundancy/approx-ratio figures
-  servo_restyle.py  editorial re-render of all data figures (uses servo_style.py)
-  servo_style.py    figure styling (palette, labels) — imported by servo_restyle.py
-  fig_teaser.py     Fig. 1 concept schematic
-  servo_hero_sys.py system-model schematic
-data/
-  servo_results.json, servo_extra_results.json, servo_v2_numbers.json, servo_figs_numbers.json
-  table_comprehensive.csv, table_ablation.csv
-  SERVO_simulation_results.md   human-readable results summary
+```text
+experiments/
+  e2e_servo.py                integrated revision experiment
+  verify_results.py           released-result integrity checks
+  make_problem_figure.py      system/problem-map figure
+  make_algorithm_figure.py    controller figure
+  checkpoints/                released GNN, MLP, and SAC checkpoints
+  results/                    raw observations, summaries, and manifest
+code/                         legacy selection-layer simulators
+data/                         legacy selection-layer outputs
 ```
 
 ## Citation
@@ -114,14 +149,12 @@ data/
 @article{lin2026servo,
   author  = {Lin, Jiaqi and Yan, Shi and Zhang, Shenhu and Wang, Yong and
              Sun, Yifu and Xu, Chengwei and Peng, Mugen},
-  title   = {{SERVO}: Submodular Coverage-Aware Orchestration of Edge Services in the
-             {6G} Sensing--Communication--Computing Continuum},
+  title   = {{SERVO}: Submodular Coverage-Aware Orchestration of Edge Services
+             in the {6G} Sensing--Communication--Computing Continuum},
   journal = {IEEE Transactions on Services Computing},
-  note    = {under review},
+  note    = {major revision},
   year    = {2026}
 }
 ```
 
-## License
-
-Released under the MIT License — see [LICENSE](LICENSE).
+Released under the MIT License.
