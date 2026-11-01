@@ -1,160 +1,86 @@
-# SERVO: Submodular Coverage-Aware Orchestration
+# Corrected SERVO revision artifact — 1 November 2026
 
-Reproducibility artifact for:
+The current paper uses `revision_consistency.py` and `results_consistency/`.
+The previous `e2e_servo.py` command-line pipeline, `results/`, and its legacy
+SAC checkpoint are superseded. That module is still imported for shared scene,
+estimator, allocation, and calibration functions. The original `code/` and
+`data/` track concerns fixed-quality selection only.
 
-> **SERVO: Submodular Coverage-Aware Orchestration of Edge Services in the 6G
-> Sensing–Communication–Computing Continuum**, J. Lin *et al.*,
-> IEEE Transactions on Services Computing, major revision, 2026.
+## Correction and scope
 
-This repository contains two evaluation tracks:
+The previous physical calculation added a dimensionless `1e-9` guard to a SINR
+denominator whose noise power was `1e-12` W. The corrected calculation uses
+`max(noise + interference, 1e-30)` in watts. Both allocator reward variants
+were retrained for 36,000 transitions, and all system-level results were rerun.
+Do not mix the previous results with the corrected dataset.
 
-1. **`experiments/` — end-to-end major-revision package (primary).**
-   A dynamic system-level urban-V2X simulator jointly executes the bipartite
-   coverage GNN, lazy submodular selector, residual SAC resource allocator, and
-   Page–Hinkley calibration loop.
-2. **`code/` and `data/` — original selection-layer package (legacy v1.0).**
-   These files reproduce the earlier Monte Carlo studies of the fixed-quality
-   submodular selector and are retained for traceability.
+Admission count, node count, power, and compute budgets are hard constraints.
+Service success is checked after actual interference and measured serial
+control-plus-service latency. Budget normalization does not certify an SLA.
+Reference sensing quality and the normalization denominator are independent of
+controller actions. The main results concern independent network snapshots;
+they do not establish continuous queueing or cross-epoch reservations.
 
-## End-to-end revision package
+## Commands
 
-The revised environment models mobility, distance-dependent path loss and
-shadowing, co-channel interference, heterogeneous edge capacity, stochastic
-service requests, deadlines, burst load, congestion, node failure, and concept
-drift. The default trace contains 72 vehicles, 36 semantic events, four edge
-nodes, 120 slots, and an eight-flow admission budget.
-
-Seven integrated variants isolate the estimator, selector, allocator, and
-adaptation mechanism. Reported metrics include normalized completed-service
-value, P95 latency, SLA violation, completion, CPU/power utilization, total and
-per-completion energy, and complete-controller wall-clock overhead.
-
-### Headline results
-
-All entries below are means over 10 independent nominal seeds. Confidence
-intervals and all per-slot observations are available in
-[`experiments/results/`](experiments/results/).
-
-| Method | Value | P95 latency (ms) | SLA violation (%) | Completion (%) | Energy (J/slot) | Overhead (ms/slot) |
-|---|---:|---:|---:|---:|---:|---:|
-| SERVO | 0.619 | 75.7 | 30.4 | 69.6 | 15.66 | 5.75 |
-| MLP + Submodular + SAC | 0.615 | 73.9 | 31.2 | 68.8 | 15.51 | 4.99 |
-| GNN + WUM + SAC | 0.463 | 76.9 | 33.4 | 66.6 | 14.20 | 2.86 |
-| GNN + Submodular + fixed interference | 0.591 | 74.6 | 33.1 | 66.9 | 19.22 | 4.69 |
-| GNN + Submodular + equal/full allocation | 0.639 | 73.7 | 27.1 | 72.9 | 16.47 | 4.79 |
-| SERVO without adaptation | 0.619 | 75.5 | 30.6 | 69.4 | 15.66 | 5.24 |
-| Load-aware + equal allocation | 0.483 | 69.7 | 30.5 | 69.5 | 12.75 | 2.31 |
-
-The equal/full baseline deliberately activates all available resource. It
-achieves higher nominal value than SERVO but consumes 0.81 J/slot more energy;
-the manuscript treats this as a value–resource trade-off, not as a dominance
-claim.
-
-Across the six stress cases, SERVO value ranges from 0.536 to 0.625 and the
-largest SLA violation is 40.2% under node failure. On common concept-drift
-traces, Page–Hinkley calibration recovers in 7.7 slots, compared with 11.3 for
-EMA and 15.0 for periodic refitting; the frozen estimator has 0% recovery
-success within the 60-slot post-drift horizon.
-
-## Reproduce the revised experiments
-
-The released full-run manifest records Python 3.12.7, NumPy 1.26.4,
-PyTorch 2.12.1+cpu, and Stable-Baselines3 2.9.0. Install the complete
-environment with:
+From the repository root, install `requirements.txt`, then:
 
 ```bash
-pip install -r requirements.txt
+python experiments/verify_consistency.py
+python experiments/diagnose_consistency.py
+python experiments/present_consistency.py
 ```
 
-Verify the released raw tables and summaries without rerunning training:
+These verify the released results, reconstruct 3,840 logged event outcomes with
+their recorded control times, and generate tables and figures. No training is
+needed with the released checkpoints. Figure generation writes to `manuscript/`.
+
+To run all traces again, using the released models:
 
 ```bash
-python experiments/verify_results.py
+python experiments/revision_consistency.py --train-steps 36000
+python experiments/verify_consistency.py
+python experiments/diagnose_consistency.py
+python experiments/present_consistency.py
 ```
 
-Run the complete pipeline using the released checkpoints:
+This overwrites `results_consistency/`. Preserve the released directory if
+comparing runs. Add `--force-train` to retrain the two SAC policies. The fixed
+GNN/MLP checkpoints remain in `checkpoints/`; current SAC policies are in
+`checkpoints_consistency/`. A `--smoke` run is only a software check and cannot
+be used to generate the paper. Timing and timing-dependent success may differ
+between machines or under different host load.
 
-```bash
-python experiments/e2e_servo.py
-```
+## Experimental controls
 
-Retrain the GNN, MLP ablation, and SAC allocator before running all traces:
+- Ten nominal methods: full SERVO, MLP, additive selection, FI-1, full Equal,
+  resource-matched Equal, Reference, FI-CVX, CostCov, and additive-reward SAC.
+- Equal-match reproduces actual actor power/compute totals per node and snapshot,
+  then splits them equally. Its timing includes the actor used to obtain totals.
+- FI-1 is a single-update heuristic. FI-CVX actually solves the frozen-interference
+  energy problem using CVXPY 1.6.7 and CLARABEL; infeasibility/failure triggers an
+  explicitly logged Reference fallback. Service-only and serial outcomes differ.
+- CostCov adapts marginal coverage per demand cost from budgeted maximum coverage.
+  It is not a reproduction of Jia et al.'s single-peer AVUCB policy.
+- Admission budgets grow 4/8/12/16 with vehicles/events/nodes. Resource sweeps
+  hold the admitted set fixed. The small exact oracle bounds reference coverage,
+  not the resource-coupled delivered-value optimum.
+- Confidence intervals use trace-seed means with paired comparisons on common
+  traces. Training seed 2026 is fixed; intervals exclude training-seed variation.
 
-```bash
-python experiments/e2e_servo.py --force-train
-```
+`run_manifest.json` records the executed script hash and run settings.
+`release_manifest.json` records code, model and data hashes plus every study's
+seed range. `verification.json` records scientific and raw-table checks.
 
-A reduced smoke test is available with `--quick`. The script writes source
-tables to `experiments/results/`, checkpoints to `experiments/checkpoints/`,
-and publication-ready PDF/PNG figures to a generated `manuscript/` directory.
+The corrected evidence identifies coverage-aware selection as the main value
+gain. It does not establish an extra average delivered-value gain from SAC over
+Reference or resource-matched Equal. GNN and PH improve some prediction metrics,
+but their paired delivered-value intervals include zero on these traces.
 
-Important traceability files:
+## References for the added controls
 
-- `run_manifest.json`: configuration, seeds, software versions, and scope;
-- `raw_main.csv`: per-slot nominal observations for all integrated variants;
-- `raw_robustness.csv`: per-slot stress-test observations;
-- `raw_recovery.csv` and `recovery.csv`: drift comparison and recovery summary;
-- `scalability.csv`: joint vehicle/event/node scaling;
-- `paper_numbers.md`: manuscript-facing result table;
-- `implementation_audit.md`: audit trail for the corrected resource-activation
-  implementation;
-- `verify_results.py`: row-count, SLA-identity, feasibility, finite-range, and
-  summary-reproduction checks.
-
-## Scope boundary
-
-The revised package is a reproducible **system-level** V2X simulation. It is
-not NS-3/SUMO packet/traffic co-simulation, a public cooperative-perception
-trace evaluation, or a field/hardware-in-the-loop trial. The coverage GNN is
-trained and tested on graphs generated by the released simulator. These limits
-are stated explicitly in the revised manuscript.
-
-## Legacy selection-layer package
-
-The original fixed-quality selection experiments remain in `code/`, with their
-released tables in `data/`. They reproduce the earlier budget, redundancy,
-streaming, bandit, REINFORCE, VoI/CTS, and exact-optimum comparisons:
-
-```bash
-cd code
-python servo_sim.py
-python servo_extra.py
-python servo_drl.py
-python servo_v2figs.py
-python servo_figs.py
-```
-
-The legacy selection value (for example, 0.880 under its correlated synthetic
-setting) and the revised end-to-end completed-service value (0.619 under the
-dynamic V2X setting) are different experiments and should not be compared as
-the same metric.
-
-## Repository layout
-
-```text
-experiments/
-  e2e_servo.py                integrated revision experiment
-  verify_results.py           released-result integrity checks
-  make_problem_figure.py      system/problem-map figure
-  make_algorithm_figure.py    controller figure
-  checkpoints/                released GNN, MLP, and SAC checkpoints
-  results/                    raw observations, summaries, and manifest
-code/                         legacy selection-layer simulators
-data/                         legacy selection-layer outputs
-```
-
-## Citation
-
-```bibtex
-@article{lin2026servo,
-  author  = {Lin, Jiaqi and Yan, Shi and Zhang, Shenhu and Wang, Yong and
-             Sun, Yifu and Xu, Chengwei and Peng, Mugen},
-  title   = {{SERVO}: Submodular Coverage-Aware Orchestration of Edge Services
-             in the {6G} Sensing--Communication--Computing Continuum},
-  journal = {IEEE Transactions on Services Computing},
-  note    = {major revision},
-  year    = {2026}
-}
-```
+- S. Khuller, A. Moss, and J. S. Naor, ?The budgeted maximum coverage problem,? Information Processing Letters 70(1), 39?45, 1999. DOI: 10.1016/S0020-0190(99)00031-9.
+- Y. Jia et al., ?Online V2X scheduling for raw-level cooperative perception,? IEEE ICC 2022, 309?314. DOI: 10.1109/ICC45855.2022.9838439. The comparator here is CostCov, not AVUCB reproduction.
+- L. Chen, H. Hassani, and A. Karbasi, ?Online continuous submodular maximization,? AISTATS 2018, 1896?1905. https://proceedings.mlr.press/v84/chen18f.html. Meta-Frank-Wolfe Algorithm 1/Theorem 1 differs from projected OGA Algorithm 2/Theorem 2.
 
 Released under the MIT License.

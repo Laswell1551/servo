@@ -1,0 +1,5 @@
+method,recovery_slots,recovery_success
+EMA,11.666666666666666,1.0
+NoAdapt,60.0,0.0
+Periodic,15.166666666666666,1.0
+SERVO,3.8333333333333335,1.0

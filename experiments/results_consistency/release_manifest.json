@@ -1,0 +1,112 @@
+{
+  "purpose": "Corrected-physics system-level revision; supersedes prior system results",
+  "training_seed": 2026,
+  "test_seeds": {
+    "nominal": [
+      20000,
+      20001,
+      20002,
+      20003,
+      20004,
+      20005,
+      20006,
+      20007,
+      20008,
+      20009
+    ],
+    "stress": [
+      21000,
+      21001,
+      21002,
+      21003,
+      21004,
+      21005
+    ],
+    "recovery": [
+      22000,
+      22001,
+      22002,
+      22003,
+      22004,
+      22005
+    ],
+    "scaling": [
+      23000,
+      23001,
+      23002,
+      23003,
+      23004
+    ],
+    "resource": [
+      24000,
+      24001,
+      24002,
+      24003,
+      24004
+    ],
+    "overlap": [
+      25000,
+      25001,
+      25002,
+      25003,
+      25004
+    ],
+    "oracle": [
+      26000,
+      26001,
+      26002,
+      26003,
+      26004,
+      26005,
+      26006,
+      26007,
+      26008,
+      26009
+    ]
+  },
+  "raw_row_counts": {
+    "raw_main.csv": 12000,
+    "raw_oracle.csv": 300,
+    "raw_overlap.csv": 1200,
+    "raw_recovery.csv": 2880,
+    "raw_resource_curve.csv": 1800,
+    "raw_robustness.csv": 15120,
+    "raw_scale.csv": 2100,
+    "raw_selection_diagnostics.csv": 3840
+  },
+  "sha256": {
+    "experiments/checkpoints/coverage_gnn.pt": "3058f72bffdd62752834b32e3deec736d8786b4d1de34201cd64168d257bc1c9",
+    "experiments/checkpoints/coverage_metrics.json": "a979de667cd34406651340630a179228a4d605893ebc52be461b890ccb5f6b22",
+    "experiments/checkpoints/coverage_mlp.pt": "d8006517353cb503f000a955bfb4a8e05d68892181669e343ae4f50e6cb65545",
+    "experiments/checkpoints_consistency/sac_additive_36000.zip": "c2ae52af6ede568d3b6406eccb76d57e1b8e5ad9cdb7fed1dde59b7d6d271adc",
+    "experiments/checkpoints_consistency/sac_coverage_36000.zip": "8d2a15a2637348f6cdaa654db1d4ffd2db0bd7ed8ee859b9feff9a1a88c82280",
+    "experiments/diagnose_consistency.py": "b6a63c1801d8c0814d5063ba395f43f00a0c688a46bebaee355cc894a7438f85",
+    "experiments/e2e_servo.py": "2030969ffd8990713c9042062d73cb0b92ad411f4d9d4ad6d20280b7514b2348",
+    "experiments/present_consistency.py": "36de38d9bec4445d97a13c897868a236df2233d30c3e97811f6d1d89bbd08167",
+    "experiments/README_consistency.md": "d239244667f88df2ab19d0e207786ab242a0e259d8710a89e0b6ef6fcafd7342",
+    "experiments/results_consistency/oracle.csv": "f1b6fe2cf773e5c3895a088e315d9fe87d2ae904bc046828efe68a5eb793bf66",
+    "experiments/results_consistency/overlap.csv": "5bb1fef55d101b2693e4b5672c25ad0f480d55f4972e227818b29a9b582c8bd0",
+    "experiments/results_consistency/paired.csv": "72bcdccc367159ddf0f2e891da34aa244d3ce326beeb328bc98551e5e449f5c1",
+    "experiments/results_consistency/paper_numbers.json": "e8610657da1ee6a1af51e964d44d6d0f9fc18ec3ec8e720596af83d4534914d4",
+    "experiments/results_consistency/raw_main.csv": "288382e7d22dfecc2d6d921803d1c25d8d734ffb0c4bdc8e7c254f9aa00c62cc",
+    "experiments/results_consistency/raw_oracle.csv": "366df449c025f5fe20efd3af6c7c588345c1cdeca71251a8ba4e56665f41d9b0",
+    "experiments/results_consistency/raw_overlap.csv": "048e26c4e586b6919f301410860df4b3524261acd42957a3fa6da038e27fac92",
+    "experiments/results_consistency/raw_recovery.csv": "2d440db651acde57182d68936a2288e77a5e02681d9d6cb3de7163b8c5f3d353",
+    "experiments/results_consistency/raw_resource_curve.csv": "0e7f3948519ec83807b72972a070213b92788b1a5e476e3d5c0a54f640f4aa91",
+    "experiments/results_consistency/raw_robustness.csv": "6cc89eb205e83c4adf613650ebe763e85a0ab092e0804b743c3d838ecf8bb310",
+    "experiments/results_consistency/raw_scale.csv": "5f236f14689790319e938b2834cf18853f7627c89103d7edfb2ce901fa4f5e47",
+    "experiments/results_consistency/raw_selection_diagnostics.csv": "3632140c13f64fadf69bffd4a77e38e3ca50babf3edfd86781618ea379f563fa",
+    "experiments/results_consistency/recovery.csv": "0dcc9b1a88aec5cca1099215ad93686fd5d036530e6d58171a5b2e43411d3e53",
+    "experiments/results_consistency/recovery_post.csv": "4c97607778ace5073dc8f6473982039c654d19a57e7cd306df8f6b6d84219844",
+    "experiments/results_consistency/resource_curve.csv": "fa99845272e156401787c09486d81d9542240e70f873ddf34d8688a0305f1e8d",
+    "experiments/results_consistency/robustness.csv": "1ebda2f9dcd5ec50ee662b42ae5750391b1003990ce6bfd80cf776d2dbdebb36",
+    "experiments/results_consistency/run_manifest.json": "8e99bdc16b53de51b320b29023f8920000ba53799773c7e8d16d1056bd3d7320",
+    "experiments/results_consistency/scalability.csv": "c07307fa9b7ba02737434b68165b1f9fbe624375abffaf409c559fed6788ce91",
+    "experiments/results_consistency/selection_diagnostics.csv": "815c7b8448a071283725a6e70ace7c7ac69c85db149e624832d54df87b9171dc",
+    "experiments/results_consistency/summary.csv": "f22a3194065f0173205090c16fe5637e46b0a034ebe83c07e0ce8431b0633687",
+    "experiments/results_consistency/verification.json": "ab49a841d89e991d9b90bfebb07465208487392f1deca19cb80a472d71042a77",
+    "experiments/revision_consistency.py": "722ba56489b13ca7d9d7bd85135be761d8c575081a871497851c5708b653317c",
+    "experiments/verify_consistency.py": "4b173b2ee4f1b9885bcf66a3104cea74c0d679ffd1fa0f4740837006a763f3cb",
+    "requirements.txt": "bdeeab2978ede57a43edbd4d0ba2250134cc0d5c3d4936a3f8566b79b9bcccc1"
+  }
+}

@@ -1,0 +1,7 @@
+# Preserve released execution/data bytes for SHA-256 verification across platforms.
+experiments/*consistency.py -text whitespace=cr-at-eol
+experiments/e2e_servo.py -text whitespace=cr-at-eol
+experiments/README_consistency.md -text whitespace=cr-at-eol
+experiments/results_consistency/* -text whitespace=cr-at-eol
+experiments/checkpoints/coverage_metrics.json -text whitespace=cr-at-eol
+requirements.txt -text whitespace=cr-at-eol

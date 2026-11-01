@@ -561,7 +561,10 @@ def select_flows(scene: Scene, q_pred: np.ndarray, imp_pred: np.ndarray, budget:
         node = scene.node_id[k]
         if not scene.node_active[node]:
             return False
-        # Conservative feasibility projection; it is not used in theorem claims.
+        # Fixed association gives a partition matroid with four flow slots/node.
+        if sum(scene.node_id[j] == node for j in chosen) >= 4:
+            return False
+        # This predicted-demand screen is a heuristic, not an SLA certificate.
         return used_cpu[node] + min(cpu_dem[k], 0.85) <= 1.12 and \
             used_power[node] + min(p_dem[k], 0.80) <= 1.15
 
@@ -674,9 +677,8 @@ def action_to_resources(action: np.ndarray, ctx: Mapping[str, np.ndarray], max_b
         ii = np.flatnonzero(node[:m] == n)
         if len(ii) == 0:
             continue
-        # A value-aware feasible warm start carries most of the allocation; SAC
-        # learns a bounded residual (multiplicative range about 0.78--1.28).  This
-        # prevents an exploratory actor from destroying deadline feasibility.
+        # Budget-feasible value-aware reference, not an SLA-feasible solution.
+        # The residual range bounds the perturbation but does not certify deadlines.
         v = np.maximum(ctx["importance"][ii] * ctx["q"][ii], 0.05)
         base_p = v * np.maximum(ctx["gain"][ii], 1e-15) ** (-0.25)
         base_f = v
@@ -703,7 +705,9 @@ def allocation_outcome(ctx: Mapping[str, np.ndarray], p: np.ndarray, f: np.ndarr
     for i in range(m):
         peers = (node == node[i])
         interference[i] = ctx["alpha"][0] * max(0.0, received[peers].sum() - received[i])
-    sinr = received / (ctx["noise"][0] + interference + EPS)
+    # A dimensionless generic EPS (1e-9) must not be added to noise measured in W.
+    # The previous addition dominated the specified 1e-12 W noise floor.
+    sinr = received / np.maximum(ctx["noise"][0] + interference, 1e-30)
     counts = np.array([max(1, np.sum(node == node[i])) for i in range(m)])
     bandwidth = ctx["bandwidth"][0] / counts
     rate = bandwidth * np.log2(1.0 + sinr)
@@ -1088,42 +1092,9 @@ def _save(fig: plt.Figure, name: str) -> None:
     plt.close(fig)
 
 
-def make_figures(data: Mapping[str, pd.DataFrame], drift_slot: int = 60) -> None:
+def make_robustness_figure(robust: pd.DataFrame) -> None:
+    """Render recorded robustness results with a separate, figure-level legend."""
     _style()
-    summary = data["summary"].set_index("method")
-    order = [m for m in METHODS if m in summary.index]
-    metrics = [
-        ("value", "Delivered value $\\uparrow$", (0, 1)),
-        ("latency_p95_ms", "P95 latency (ms) $\\downarrow$", None),
-        ("sla_violation", "SLA violation $\\downarrow$", (0, 1)),
-        ("completion", "Completion rate $\\uparrow$", (0, 1)),
-        ("energy_total_j", "Energy / slot (J) $\\downarrow$", None),
-        ("overhead_ms", "Orchestration overhead (ms) $\\downarrow$", None),
-    ]
-    fig, axes = plt.subplots(2, 3, figsize=(7.15, 4.45))
-    for ax, (metric, title, ylim) in zip(axes.flat, metrics):
-        vals = summary.loc[order, metric].to_numpy()
-        err = summary.loc[order, metric + "_ci95"].to_numpy()
-        x = np.arange(len(order))
-        colors = [PALETTE[m] if m == "SERVO" else "#A6A6A6" for m in order]
-        hatches = ["" if m == "SERVO" else "//" if "WUM" in m else "" for m in order]
-        bars = ax.bar(x, vals, yerr=err, capsize=2, color=colors, edgecolor="#333333", linewidth=0.45)
-        for b, h in zip(bars, hatches):
-            b.set_hatch(h)
-        ax.set_title(title, fontweight="bold")
-        short_label = {
-            "SERVO": "Full", "MLP+Submod+SAC": "MLP", "GNN+WUM+SAC": "WUM",
-            "GNN+Submod+FI": "FI", "GNN+Submod+Equal": "Equal",
-            "SERVO-NoAdapt": "NoAdapt", "LoadAware+Equal": "Load-aware",
-        }
-        ax.set_xticks(x); ax.set_xticklabels([short_label[m] for m in order],
-                                             rotation=24, ha="right")
-        if ylim: ax.set_ylim(*ylim)
-        ax.grid(axis="y", linestyle=":", color="#D9D9D9", linewidth=0.6)
-    fig.subplots_adjust(wspace=0.34, hspace=0.52)
-    _save(fig, "fig_e2e_main")
-
-    robust = data["robustness"]
     scenarios = ["nominal", "burst", "high-mobility", "heterogeneous", "node-failure", "congestion", "concept-drift"]
     methods = ["SERVO", "SERVO-NoAdapt", "LoadAware+Equal"]
     fig, axes = plt.subplots(1, 2, figsize=(7.15, 2.65))
@@ -1139,9 +1110,52 @@ def make_figures(data: Mapping[str, pd.DataFrame], drift_slot: int = 60) -> None
                                  ["normalized value $\\uparrow$", "violation rate $\\downarrow$"]):
         ax.set_xticks(x); ax.set_xticklabels(labels, rotation=28, ha="right")
         ax.set_title(title, fontweight="bold"); ax.set_ylabel(ylabel); ax.grid(axis="y", ls=":", color="#D9D9D9")
-    axes[0].legend(frameon=False, ncol=3, loc="lower center", bbox_to_anchor=(1.05, 1.02))
-    fig.tight_layout()
+    handles, legend_labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, legend_labels, frameon=False, ncol=3,
+               loc="upper center", bbox_to_anchor=(0.5, 1.02))
+    fig.tight_layout(rect=(0, 0, 1, 0.90))
     _save(fig, "fig_e2e_robustness")
+
+
+def make_nominal_figure(summary_data: pd.DataFrame) -> None:
+    _style()
+    summary = summary_data.set_index("method")
+    order = [m for m in METHODS if m in summary.index]
+    metrics = [
+        ("value", "Delivered value $\\uparrow$", (0, 1)),
+        ("latency_p95_ms", "P95 latency (ms) $\\downarrow$", None),
+        ("sla_violation", "SLA violation $\\downarrow$", (0, 1)),
+        ("completion", "Completion rate $\\uparrow$", (0, 1)),
+        ("energy_total_j", "Energy / slot (J) $\\downarrow$", None),
+        ("overhead_ms", "Orchestration overhead (ms) $\\downarrow$", None),
+    ]
+    fig, axes = plt.subplots(2, 3, figsize=(7.15, 3.50))
+    for ax, (metric, title, ylim) in zip(axes.flat, metrics):
+        vals = summary.loc[order, metric].to_numpy()
+        err = summary.loc[order, metric + "_ci95"].to_numpy()
+        x = np.arange(len(order))
+        colors = [PALETTE[m] if m == "SERVO" else "#A6A6A6" for m in order]
+        hatches = ["" if m == "SERVO" else "//" if "WUM" in m else "" for m in order]
+        bars = ax.bar(x, vals, yerr=err, capsize=2, color=colors, edgecolor="#333333", linewidth=0.45)
+        for b, h in zip(bars, hatches):
+            b.set_hatch(h)
+        ax.set_title(title, fontweight="bold")
+        short_label = {
+            "SERVO": "Full", "MLP+Submod+SAC": "MLP", "GNN+WUM+SAC": "WUM",
+            "GNN+Submod+FI": "FI", "GNN+Submod+Equal": "Equal",
+            "SERVO-NoAdapt": "NA", "LoadAware+Equal": "LA",
+        }
+        ax.set_xticks(x); ax.set_xticklabels([short_label[m] for m in order],
+                                             rotation=30, ha="right")
+        if ylim: ax.set_ylim(*ylim)
+        ax.grid(axis="y", linestyle=":", color="#D9D9D9", linewidth=0.6)
+    fig.subplots_adjust(wspace=0.34, hspace=0.78)
+    _save(fig, "fig_e2e_main")
+
+
+def make_figures(data: Mapping[str, pd.DataFrame], drift_slot: int = 60) -> None:
+    make_nominal_figure(data["summary"])
+    make_robustness_figure(data["robustness"])
 
     scale = data["scalability"]
     rec_raw = data["raw_recovery"]

@@ -1,0 +1,19 @@
+{
+  "scientific": {
+    "noise_units": true,
+    "budget_vs_sla_distinction": true,
+    "convex_solution_matches_scalar_grid": true,
+    "event_max_reward": true,
+    "separation_construction": true,
+    "admission_budget_and_node_capacity": true
+  },
+  "results": {
+    "main_rows": 12000,
+    "recovery_rows": 2880,
+    "robustness_rows": 15120,
+    "matched_resource_control_exact": true,
+    "normalized_reference_common": true,
+    "summary_reproducible": true,
+    "all_hard_budgets_respected": true
+  }
+}
